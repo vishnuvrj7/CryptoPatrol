@@ -1,26 +1,12 @@
 {
-    "manifest_version": 3,
-    "name": "Cryptojacking Detector",
-    "version": "1.0",
-    "description": "Detects and prevents cryptojacking scripts.",
-    "permissions": [
-      "activeTab",
-      "webRequest",
-      "webRequestBlocking",
-      "storage"
-    ],
-    "host_permissions": ["<all_urls>"],
-    "background": {
-      "service_worker": "background.js"
-    },
-    "content_scripts": [
-      {
-        "matches": ["<all_urls>"],
-        "js": ["content.js"]
-      }
-    ],
-    "action": {
-      "default_popup": "popup.html"  
-    }
+  "manifest_version": 3,
+  "name": "CryptoPatrol",
+  "version": "1.0",
+  "description": "Monitors system metrics and detects cryptojacking.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["http://localhost:5050/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
   }
-  
+}
