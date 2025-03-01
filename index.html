@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #FFDFEF;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #AA60C8;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 45%;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 200px !important;
+        }
+
+        .logs {
+            margin: 20px auto;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        .logs ul {
+            list-style: none;
+            padding: 0;
+            max-height: 150px;
+            overflow: hidden;
+        }
+
+        .logs ul.expanded {
+            max-height: none;
+        }
+
+        .logs ul li {
+            background: #EABDE6;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .logs button {
+            background: #D69ADE;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .logs button:hover {
+            background: #AA60C8;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>System Monitor</h1>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>CPU Usage</h2>
+            <canvas id="cpuChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Memory Usage</h2>
+            <canvas id="memoryChart"></canvas>
+        </div>
+    </div>
+
+    <div class="logs">
+        <h3>Logs</h3>
+        <ul id="logsList"></ul>
+        <button id="toggleLogs">Show More</button>
+        <button id="downloadLogs">Download Logs</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const logs = [];
+        const logsList = document.getElementById('logsList');
+        const toggleLogsButton = document.getElementById('toggleLogs');
+        const downloadLogsButton = document.getElementById('downloadLogs');
+        let isExpanded = false;
+
+        const cpuChartCtx = document.getElementById('cpuChart').getContext('2d');
+        const memoryChartCtx = document.getElementById('memoryChart').getContext('2d');
+
+        const createChart = (ctx, label, borderColor) => {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: borderColor,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        backgroundColor: `${borderColor}22`,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Value' } },
+                    },
+                },
+            });
+        };
+
+        const cpuChart = createChart(cpuChartCtx, 'CPU Usage (%)', '#AA60C8');
+        const memoryChart = createChart(memoryChartCtx, 'Free Memory (MB)', '#D69ADE');
+
+        const updateLogsList = () => {
+            logsList.innerHTML = '';
+            const logsToShow = isExpanded ? logs : logs.slice(-4);
+            logsToShow.forEach(log => {
+                const logItem = document.createElement('li');
+                logItem.textContent = log;
+                logsList.appendChild(logItem);
+            });
+            logsList.className = isExpanded ? 'expanded' : '';
+        };
+
+        socket.on('systemUpdate', (data) => {
+            const timestamp = new Date().toLocaleTimeString();
+            const log = `Time: ${timestamp}, CPU: ${data.cpuUsage}%, Free Memory: ${data.freeMem} MB, Top Process: ${data.topProcess} (${data.topProcessCpu}%)`;
+
+            logs.push(log);
+            if (logs.length > 100) logs.shift();
+
+            cpuChart.data.labels.push(timestamp);
+            cpuChart.data.datasets[0].data.push(data.cpuUsage);
+
+            memoryChart.data.labels.push(timestamp);
+            memoryChart.data.datasets[0].data.push(data.freeMem);
+
+            if (cpuChart.data.labels.length > 20) {
+                cpuChart.data.labels.shift();
+                cpuChart.data.datasets[0].data.shift();
+            }
+
+            if (memoryChart.data.labels.length > 20) {
+                memoryChart.data.labels.shift();
+                memoryChart.data.datasets[0].data.shift();
+            }
+
+            cpuChart.update();
+            memoryChart.update();
+
+            updateLogsList();
+        });
+
+        socket.on('highCpuAlert', (message) => {
+            alert(message);
+        });
+
+        toggleLogsButton.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            toggleLogsButton.textContent = isExpanded ? 'Show Less' : 'Show More';
+            updateLogsList();
+        });
+
+        downloadLogsButton.addEventListener('click', () => {
+    // Extract and clean the data
+    const cleanLogs = logs.map(log => {
+        // Use regex to extract relevant fields from the log string
+        const match = log.match(/Time: ([\d: ]+ [APM]+).*?CPU: ([\d.]+)%.*?Free Memory: ([\d.]+).*?Top Process: (.+) \(([\d.]+)%\)/);
+        if (match) {
+            return `${match[1]},${match[2]},${(parseFloat(match[3]) / 1000).toFixed(2)},${match[4]},${match[5]}`;
+        }
+        return null; // Skip if the log doesn't match the expected format
+    }).filter(log => log !== null); // Remove any null entries
+
+    // Prepare CSV content
+    const csvContent = 'Time,CPU Usage (%),Free Memory (GB),Top Process,Top Process CPU (%)\n' +
+        cleanLogs.join('\n');
+
+    // Create a Blob for the cleaned CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'cleaned_system_logs.csv'; // Updated file name for clarity
+    link.click();
+});
+
+    </script>
+</body>
+</html>
