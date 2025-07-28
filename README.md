@@ -68,13 +68,34 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 ```
 
 ---
+## 🔗 Related Projects
 
-## Future Improvements
-- Add detailed documentation for `app.py` functionality.
-- Include testing steps and troubleshooting tips for common issues.
-- Provide a sample dataset or example use cases for better understanding.
+Here are other repositories developed by me that focus on detecting and preventing **crypto-jacking** attacks:
+
+### [CryptoGuardML](https://github.com/vishnuvrj7/CryptoGuardML)
+A **machine learning-based crypto-jacking detection system** that analyzes system-level performance metrics (CPU, memory, etc.) to identify mining behavior.
+
+- **Tech Stack**: Python, Scikit-learn, Pandas, Matplotlib  
+- **Key Features**:
+  - Dataset analysis
+  - ML model training & evaluation
+  - Early-stage detection of crypto-mining activity
 
 ---
+
+### [CryptojackSentinal](https://github.com/vishnuvrj7/CryptojackSentinal)
+An **advanced system-level sentinel** that detects and prevents stealthy crypto-mining scripts running on the machine, even outside the browser.
+
+- **Tech Stack**: Python, psutil, watchdog, tkinter  
+- **Key Features**:
+  - Real-time monitoring of system processes
+  - Alerts on suspicious mining behavior
+  - Auto-kill mining processes with activity logs
+
+---
+
+> Explore these tools to build a complete defense system against in-browser and system-level crypto-jacking threats.
+
 
 ## License
 This project is open-source and licensed under [MIT License](LICENSE).
